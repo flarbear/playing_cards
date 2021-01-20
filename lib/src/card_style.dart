@@ -18,10 +18,9 @@ CardStyle defaultCardStyle = ClassicCardStyle();
 abstract class CardStyle {
   const CardStyle();
 
-  double get width;
-  double get height;
+  Size get preferredSize;
   double get cascadeOffset;
-  double get aspectRatio => width / height;
+  double get aspectRatio => preferredSize.aspectRatio;
 
   String suitName(PlayingCard card);
   String rankName(PlayingCard card);
@@ -57,8 +56,7 @@ abstract class CardStyle {
 class ClassicCardStyle extends CardStyle {
   const ClassicCardStyle() : super();
 
-  double get width => 90;
-  double get height => 140;
+  Size get preferredSize => const Size(90, 140);
   double get cascadeOffset => 25;
 
   static final Path heart = Path()
@@ -208,7 +206,10 @@ class PlayingCardPainter extends CustomPainter {
       p.color = Color(0x42000000);
       canvas.drawRRect(outline, p);
 
-      canvas.scale(size.width / style.width, size.height / style.height);
+      canvas.scale(
+        size.width  / style.preferredSize.width,
+        size.height / style.preferredSize.height,
+      );
       if (card!.isBack) {
         style.drawCardBack(canvas);
       } else {

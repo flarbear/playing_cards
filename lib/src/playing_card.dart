@@ -126,6 +126,11 @@ class PlayingCardStack {
   PlayingCardStack({ this.size = 0, this.top })
       : assert(size > 0 || top == null);
 
+  /// Extract the info for a stack of cards from a list.
+  PlayingCardStack.fromList(List<PlayingCard> cards)
+      : this.size = cards.length,
+        this.top = cards.isEmpty ? null : cards.last;
+
   /// The size of the stack of cards.
   final int size;
 
