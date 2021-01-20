@@ -22,6 +22,20 @@ void main() {
         expect(card, isNot(equals(PlayingCard.back)));
         expect(PlayingCard.wild, isNot(equals(card)));
         expect(PlayingCard.back, isNot(equals(card)));
+
+        final PlayingCard back = PlayingCard(suit: suit, rank: -rank);
+        expect(back.isWild, false);
+        expect(back.isBack, true);
+        expect(back, equals(PlayingCard(suit: suit, rank: -rank)));
+        expect(back, isNot(equals(PlayingCard.wild)));
+        expect(PlayingCard.wild, isNot(equals(back)));
+        if (suit == 0 && rank == 1) {
+          expect(back, equals(PlayingCard.back));
+          expect(PlayingCard.back, equals(back));
+        } else {
+          expect(back, isNot(equals(PlayingCard.back)));
+          expect(PlayingCard.back, isNot(equals(back)));
+        }
       }
     }
     expect(PlayingCard.wild, equals(PlayingCard.wild));

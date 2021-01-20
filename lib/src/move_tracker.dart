@@ -49,8 +49,17 @@ class MoveTracker<ID, S extends CardGameState<ID>> {
     gameState.setCurrentMove(MoveState<ID>.empty());
   }
 
-  S gameState;
+  final S gameState;
   final Map<ID, Map<ID, Move<ID, S>>> allMoves;
+  late final Set<ID> _trackedIds = {
+    ...allMoves.keys,
+    for (final subMap in allMoves.values)
+      ...subMap.keys,
+  };
+
+  bool isTracking(ID type) {
+    return _trackedIds.contains(type);
+  }
 
   bool isHighlighted(ID type) {
     MoveState<ID> moveState = gameState.getCurrentMove();

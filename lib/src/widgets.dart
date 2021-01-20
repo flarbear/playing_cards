@@ -14,36 +14,6 @@ import 'card_style.dart';
 import 'move_tracker.dart';
 import 'playing_card.dart';
 
-/// A widget that paints a playing card. The artwork will auto-scale to
-/// the size of the space allocated to it, but the best results will occur
-/// when the space has the aspect ratio suggested by the CardStyle.
-class PlayingCardWidget extends StatelessWidget {
-  PlayingCardWidget(PlayingCard? card, {
-    this.highlighted = false,
-    CardStyle? style,
-  })
-      : this.card = card,
-        this.style = style ?? card?.style ?? defaultCardStyle;
-
-  final PlayingCard? card;
-  final bool highlighted;
-  final CardStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: AspectRatio(
-        aspectRatio: style.aspectRatio,
-        child: CustomPaint(
-          painter: PlayingCardPainter(style, card, highlighted),
-          isComplex: true,
-          willChange: false,
-        ),
-      ),
-    );
-  }
-}
-
 abstract class TrackableCardGroup extends StatelessWidget {
   TrackableCardGroup(this.highlighted, CardStyle? style)
       : this.style = style ?? defaultCardStyle;
@@ -72,8 +42,51 @@ abstract class TrackableCardGroup extends StatelessWidget {
   }
 }
 
-class PlayingCardStack extends TrackableCardGroup {
-  PlayingCardStack(this.top, this.size, {
+/// A widget that paints a playing card. The artwork will auto-scale to
+/// the size of the space allocated to it, but the best results will occur
+/// when the space has the aspect ratio suggested by the CardStyle.
+class PlayingCardWidget extends TrackableCardGroup {
+  PlayingCardWidget(PlayingCard? card, {
+    bool highlighted = false,
+    CardStyle? style,
+  })
+      : this.card = card,
+        super(highlighted, style ?? card?.style);
+
+  static Widget tracked<ID>(
+      MoveTracker<ID, CardGameState<ID>>? tracker,
+      ID id,
+      bool addLayout,
+      PlayingCard? card, {
+        CardStyle? style,
+      }) {
+    return TrackableCardGroup.track(tracker, id, addLayout,
+      PlayingCardWidget(card,
+        highlighted: tracker?.isHighlighted(id) ?? false,
+        style: style,
+      ),
+    );
+  }
+
+  final PlayingCard? card;
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: AspectRatio(
+        aspectRatio: style.aspectRatio,
+        child: CustomPaint(
+          painter: PlayingCardPainter(style, card, highlighted),
+          isComplex: true,
+          willChange: false,
+        ),
+      ),
+    );
+  }
+}
+
+class PlayingCardStackWidget extends TrackableCardGroup {
+  PlayingCardStackWidget(this.stack, {
     bool highlighted = false,
     CardStyle? style,
   }) : super(highlighted, style);
@@ -82,35 +95,35 @@ class PlayingCardStack extends TrackableCardGroup {
       MoveTracker<ID, CardGameState<ID>>? tracker,
       ID id,
       bool addLayout,
-      PlayingCard? top,
-      int? size, {
+      PlayingCardStack stack, {
         CardStyle? style,
       }) {
     return TrackableCardGroup.track(tracker, id, addLayout,
-      PlayingCardStack(top, size,
+      PlayingCardStackWidget(stack,
         highlighted: tracker?.isHighlighted(id) ?? false,
         style: style,
       ),
     );
   }
 
-  final PlayingCard? top;
-  final int? size;
+  final PlayingCardStack stack;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
-        PlayingCardWidget(size == 0 ? null : top, highlighted: highlighted, style: style),
-        if (size != null)
-          size == 0 ? Text('(empty)') : Text('($size cards)'),
+        PlayingCardWidget(stack.size == 0 ? null : stack.top,
+          highlighted: highlighted,
+          style: style,
+        ),
+        stack.size == 0 ? Text('(empty)') : Text('(${stack.size} cards)'),
       ],
     );
   }
 }
 
-class PlayingCardPile extends TrackableCardGroup {
-  PlayingCardPile(this.cards, this.minimumCards, {
+class PlayingCardPileWidget extends TrackableCardGroup {
+  PlayingCardPileWidget(this.cards, this.minimumCards, {
     bool highlighted = false,
     CardStyle? style,
   }) : super(highlighted, style);
@@ -125,7 +138,9 @@ class PlayingCardPile extends TrackableCardGroup {
       List<PlayingCard> cards,
       int minimumSize) {
     return TrackableCardGroup.track(tracker, id, addLayout,
-        PlayingCardPile(cards, minimumSize, highlighted: tracker?.isHighlighted(id) ?? false,)
+        PlayingCardPileWidget(cards, minimumSize,
+          highlighted: tracker?.isHighlighted(id) ?? false,
+        )
     );
   }
 
@@ -203,34 +218,39 @@ class TableauLayoutBase extends MultiChildLayoutDelegate {
   final List<double> rowHeights;
   late Size prefSize = _prefSize();
 
-  Offset _processEntry(int rowIndex, int colIndex, Offset pos, double? scale) {
+  Offset _processEntry(int rowIndex, int colIndex, Offset pos, double? scale, Map<Object, Size>? sizes) {
     var entry = spec.rows[rowIndex].groups[colIndex];
     pos += entry.insets.topLeft;
     if (scale != null) positionChild(entry.childId, pos);
-    pos = pos.translate(cardWidth, rowHeights[rowIndex]);
+    Size? childSize = sizes?[entry.childId];
+    if (childSize == null) {
+      pos = pos.translate(cardWidth, rowHeights[rowIndex]);
+    } else {
+      pos = pos.translate(childSize.width, childSize.height);
+    }
     pos = pos - entry.insets.bottomRight;
     return pos;
   }
 
-  Offset _processOneRow(int rowIndex, Offset pos, double? scale) {
+  Offset _processOneRow(int rowIndex, Offset pos, double? scale, Map<Object, Size>? sizes) {
     final row = spec.rows[rowIndex];
     pos += row.insets.topLeft;
     double maxY = pos.dy;
     for (int colIndex = 0; colIndex < row.groups.length; colIndex++) {
       if (colIndex > 0) pos = pos.translate(row.innerGroupPad, 0.0);
-      Offset childBottomRight = _processEntry(rowIndex, colIndex, pos, scale);
+      Offset childBottomRight = _processEntry(rowIndex, colIndex, pos, scale, sizes);
       maxY = max(maxY, childBottomRight.dy);
       pos = Offset(childBottomRight.dx, pos.dy);
     }
     return Offset(pos.dx, maxY) - row.insets.bottomRight;
   }
 
-  Offset _processRows(double? scale) {
+  Offset _processRows(double? scale, Map<Object, Size>? sizes) {
     Offset pos = spec.insets.topLeft;
     double maxX = pos.dx;
     for (int rowIndex = 0; rowIndex < spec.rows.length; rowIndex++) {
       if (rowIndex > 0) pos = pos.translate(0.0, spec.innerRowPad);
-      Offset rowBottomRight = _processOneRow(rowIndex, pos, scale);
+      Offset rowBottomRight = _processOneRow(rowIndex, pos, scale, sizes);
       maxX = max(maxX, rowBottomRight.dx);
       pos = Offset(pos.dx, rowBottomRight.dy);
     }
@@ -238,7 +258,7 @@ class TableauLayoutBase extends MultiChildLayoutDelegate {
   }
 
   Size _prefSize() {
-    Offset maxPos = _processRows(null);
+    Offset maxPos = _processRows(null, null);
     return Size(maxPos.dx, maxPos.dy);
   }
 
@@ -272,13 +292,14 @@ class TableauLayoutBase extends MultiChildLayoutDelegate {
     double scale = size.width / prefSize.width;
     BoxConstraints constraints = BoxConstraints.tightFor(width: scale * cardWidth);
 
+    Map<Object, Size> childSizes = {};
     for (final row in spec.rows) {
       for (final entry in row.groups) {
-        layoutChild(entry.childId, constraints);
+        childSizes[entry.childId] = layoutChild(entry.childId, constraints);
       }
     }
 
-    _processRows(scale);
+    _processRows(scale, childSizes);
   }
 
   static bool _sameRowHeights(List<double> rows1, List<double> rows2) {
