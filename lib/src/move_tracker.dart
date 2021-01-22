@@ -6,10 +6,14 @@
  * https://opensource.org/licenses/MIT.
  */
 
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
+
 class MoveState<ID> {
-  MoveState(this.from, this.selected, this.to);
-  MoveState.empty() : from = null, selected = false, to = null;
-  MoveState.from(this.from) : selected = false, to = null;
+  const MoveState(this.from, this.selected, this.to);
+  const MoveState.empty() : from = null, selected = false, to = null;
+  const MoveState.from(this.from) : selected = false, to = null;
 
   final ID? from;
   final bool selected;
@@ -18,14 +22,22 @@ class MoveState<ID> {
   MoveState<ID> withFrom(ID? from) => MoveState(from, selected, to);
   MoveState<ID> withSelected(bool selected) => MoveState(from, selected, to);
   MoveState<ID> withTo(ID? to) => MoveState(from, selected, to);
+
+  @override
+  int get hashCode {
+    return hashValues(from, selected, to);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MoveState
+        && from     == other.from
+        && selected == other.selected
+        && to       == other.to;
+  }
 }
 
-abstract class CardGameState<ID> {
-  MoveState<ID> getCurrentMove();
-  setCurrentMove(MoveState<ID> moveState);
-}
-
-class Move<ID, S extends CardGameState<ID>> {
+class Move<ID, S> {
   const Move.binary(this.from, this.to, {
     required this.canMove,
     required this.execute,
@@ -44,13 +56,12 @@ class Move<ID, S extends CardGameState<ID>> {
   bool get isUnary => from == to;
 }
 
-class MoveTracker<ID, S extends CardGameState<ID>> {
-  MoveTracker(this.gameState, this.allMoves) {
-    gameState.setCurrentMove(MoveState<ID>.empty());
-  }
+class MoveTracker<ID, S> extends ValueNotifier<MoveState<ID>> {
+  MoveTracker(this.gameState, this.allMoves) : super(const MoveState.empty());
 
   final S gameState;
   final Map<ID, Map<ID, Move<ID, S>>> allMoves;
+
   late final Set<ID> _trackedIds = {
     ...allMoves.keys,
     for (final subMap in allMoves.values)
@@ -62,38 +73,35 @@ class MoveTracker<ID, S extends CardGameState<ID>> {
   }
 
   bool isHighlighted(ID type) {
-    MoveState<ID> moveState = gameState.getCurrentMove();
-    return (moveState.from == type || moveState.to == type);
+    return (value.from == type || value.to == type);
   }
 
   void leaving(ID type) {
-    MoveState<ID> moveState = gameState.getCurrentMove();
-    if (moveState.selected) {
-      if (moveState.to == type) {
-        gameState.setCurrentMove(moveState.withTo(null));
+    if (value.selected) {
+      if (value.to == type) {
+        value = value.withTo(null);
       }
-    } else if (moveState.from == type) {
-      gameState.setCurrentMove(moveState.withFrom(null));
+    } else if (value.from == type) {
+      value = value.withFrom(null);
     }
   }
 
   void hoveringOver(ID type, bool click) {
-    final MoveState<ID> currentState = gameState.getCurrentMove();
     MoveState<ID> newState;
-    if (currentState.selected) {
-      Move<ID, S>? move = allMoves[currentState.from]?[type];
+    if (value.selected) {
+      Move<ID, S>? move = allMoves[value.from]?[type];
       if (move != null && move.canMove(gameState)) {
         if (click) {
           move.execute(gameState);
           newState = MoveState<ID>.empty();
         } else {
-          newState = currentState.withTo(type);
+          newState = value.withTo(type);
         }
       } else {
         if (click) {
           newState = MoveState<ID>.empty();
         } else {
-          newState = currentState.withTo(null);
+          newState = value.withTo(null);
         }
       }
     } else {
@@ -113,10 +121,6 @@ class MoveTracker<ID, S extends CardGameState<ID>> {
         newState = MoveState<ID>.empty();
       }
     }
-    if (currentState.from     != newState.from ||
-        currentState.selected != newState.selected ||
-        currentState.to       != newState.to) {
-      gameState.setCurrentMove(newState);
-    }
+    value = newState;
   }
 }
