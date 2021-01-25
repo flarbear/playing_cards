@@ -13,7 +13,8 @@ import 'package:flutter/rendering.dart';
 
 import 'playing_card.dart';
 
-CardStyle defaultCardStyle = ClassicCardStyle();
+CardStyle defaultCardStyle = const ClassicCardStyle();
+List<CardStyle> allCardStyles = [ const ClassicCardStyle() ];
 
 abstract class CardStyle {
   const CardStyle();
@@ -38,7 +39,7 @@ abstract class CardStyle {
       String text,
       Color color,
       String fontFamily) {
-    TextSpan span = TextSpan(text: text, style: TextStyle(color: color, fontFamily: fontFamily));
+    TextSpan span = TextSpan(text: text, style: TextStyle(color: color, fontFamily: fontFamily, fontSize: textHeight));
     TextPainter tp = new TextPainter(text: span, textDirection: TextDirection.ltr);
     tp.layout();
     double scale = textHeight / tp.height;
