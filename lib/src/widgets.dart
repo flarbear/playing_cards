@@ -61,6 +61,7 @@ class SinglePlayingCard<ID> extends PlayingCardItem<ID> {
 
 enum StackedPlayingCardsCaption {
   none,
+  ranked,
   hover,
   small,
   smallNonZero,
@@ -113,11 +114,15 @@ class StackedPlayingCards<ID> extends PlayingCardItem<ID> {
   Widget build(BuildContext context) {
     Size size = preferredSize(TableauInfo.of(context)?.style ?? defaultCardStyle, context);
     String? captionString = _captionString;
+    PlayingCard? top = stack.top;
+    if (caption == StackedPlayingCardsCaption.ranked && top != null && top.isWild) {
+      top = PlayingCard.asWild(suit: top.suit, rank: stack.size, style: top.style);
+    }
     Widget widget = AspectRatio(
       aspectRatio: size.aspectRatio,
       child: Column(
         children: <Widget>[
-          SinglePlayingCard(stack.size == 0 ? null : stack.top, id: id),
+          SinglePlayingCard(stack.size == 0 ? null : top, id: id),
           if (captionString != null)
             Expanded(child: FittedBox(fit: BoxFit.scaleDown, child: Text(captionString),)),
         ],
@@ -125,7 +130,7 @@ class StackedPlayingCards<ID> extends PlayingCardItem<ID> {
     );
     if (caption == StackedPlayingCardsCaption.hover) {
       widget = Tooltip(
-        message: '${stack.size} cards',
+        message: stack.size == 0 ? '(empty)' : '${stack.size} cards',
         child: widget,
       );
     }

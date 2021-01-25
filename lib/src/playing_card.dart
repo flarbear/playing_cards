@@ -15,13 +15,14 @@ import 'card_style.dart';
 /// a [CardStyle] instance to interpret its visual representation and
 /// its rank and suit naming.
 ///
-/// A rank of 0 is considered a wild card for purposes of the [isWild]
-/// property, but that association can be ignored for usage with a
-/// conceptual set of cards which have no wild cards. A constant
+/// A rank of 0 is considered by default to be a wild card for purposes
+/// of the [isWild] property, but that association can be ignored for
+/// usage with a conceptual set of cards which have no wild cards or
+/// for usages where some ranked cards are considered wild. A constant
 /// [PlayingCard.wild] instance is provided for convenience which
-/// assumes a suit index of `0`, but wild cards in specific suits
-/// can also be created using the constructor as the rank is the
-/// only determiner used by the [isWild] property.
+/// assumes a rank and suit index of `0`, but wild cards in specific
+/// suits and with specific ranks can also be created using the
+/// constructor.
 ///
 /// Any negative rank is considered a face down card by the widgets
 /// that display cards. A constant [PlayingCard.back] instance is
@@ -50,12 +51,32 @@ class PlayingCard {
   static const PlayingCard wild = const PlayingCard(suit: 0, rank:  0);
 
   /// Constructs a playing card with the given [suit], [rank], and
-  /// optional [style].
+  /// optional [isWild] and [style].
+  ///
+  /// If [isWild] is not specified then it will be assumed from
+  /// the rank (`[rank] == 0`). If the [isWild] property is specified
+  /// as `true` and a [rank] other than `0` is given, then the
+  /// [style] should support [CardStyle.rendersWildRanks].
   const PlayingCard({
     required this.suit,
     required this.rank,
+    bool? isWild,
     this.style,
-  });
+  }) : this._isWild = isWild;
+
+  /// Constructs a wild playing card with the given [suit] and
+  /// an optional [rank] and [style].
+  ///
+  /// Ranked wild cards should only be used with [CardStyle]
+  /// implementations that support rendering the ranks of
+  /// wild cards.
+  ///
+  /// @see [CardStyle.rendersWildRanks]
+  const PlayingCard.asWild({
+    required this.suit,
+    int? rank,
+    this.style,
+  }) : this.rank = rank ?? 0, this._isWild = true;
 
   /// The suit index of the card as semantically interpreted by the game
   /// logic and as visually interpreted by the [CardStyle] with which it
@@ -79,9 +100,11 @@ class PlayingCard {
   /// display widgets instead.
   final CardStyle? style;
 
-  /// A simple and common assessment as to whether this card is
-  /// wild based on associating a rank of `0` with wild cards.
-  bool get isWild => rank == 0;
+  /// True if this card was explicitly designated as a wild card
+  /// in the constructor or if it is implicitly wild due to being
+  /// constructed with a rank of 0.
+  bool get isWild => _isWild ?? (rank == 0);
+  final bool? _isWild;
 
   /// A simple and common assessment as to whether this card is
   /// face down based on associating all negative ranks as being

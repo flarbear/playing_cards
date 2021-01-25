@@ -21,6 +21,7 @@ abstract class CardStyle {
   Size get preferredSize;
   double get cascadeOffset;
   double get aspectRatio => preferredSize.aspectRatio;
+  bool get rendersWildRanks;
 
   String suitName(PlayingCard card);
   String rankName(PlayingCard card);
@@ -56,8 +57,9 @@ abstract class CardStyle {
 class ClassicCardStyle extends CardStyle {
   const ClassicCardStyle() : super();
 
-  Size get preferredSize => const Size(90, 140);
-  double get cascadeOffset => 25;
+  @override Size get preferredSize => const Size(90, 140);
+  @override double get cascadeOffset => 25;
+  @override bool get rendersWildRanks => true;
 
   static final Path heart = Path()
     ..moveTo(45, 55)
@@ -157,19 +159,27 @@ class ClassicCardStyle extends CardStyle {
     canvas.drawPath(zigzag, p);
   }
 
+  static List<Color> _suitColors = [ Color(0xFF000000), Color(0xFFF44336), Color(0xFFF44336), Color(0xFF000000) ];
+
   @override
   void drawCard(Canvas canvas, PlayingCard card) {
     Paint p = Paint();
 
-    String name;
     if (card.isWild) {
-      name = r'$';
       p.color = Color(0xFF000000);
       drawTextAnchored(canvas, 42, 80, Offset(0.5, 0.5), Offset(45, 70), 'Joker', p.color, 'Tahoma');
     } else {
       Path suitPath = [ spade, heart, diamond, club ][card.suit & 3];
-      p.color = [ Color(0xFF000000), Color(0xFFF44336), Color(0xFFF44336), Color(0xFF000000) ][card.suit & 3];
+      p.color = _suitColors[card.suit & 3];
       canvas.drawPath(suitPath, p);
+    }
+
+    String name;
+    if (card.rank == 0) {
+      p.color = Color(0xFF000000);
+      name = r'$';
+    } else {
+      p.color = _suitColors[card.suit & 3];
       name = rankName(card);
       if (name.length > 2) name = name.substring(0, 1);
     }
