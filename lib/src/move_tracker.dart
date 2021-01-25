@@ -76,7 +76,7 @@ class MoveTracker<ID, S> extends ValueNotifier<MoveState<ID>> {
     return (value.from == type || value.to == type);
   }
 
-  void leaving(ID type) {
+  void leaving(ID? type) {
     if (value.selected) {
       if (value.to == type) {
         value = value.withTo(null);
@@ -86,7 +86,7 @@ class MoveTracker<ID, S> extends ValueNotifier<MoveState<ID>> {
     }
   }
 
-  void hoveringOver(ID type, bool click) {
+  void hoveringOver(ID? type, bool click) {
     MoveState<ID> newState;
     if (value.selected) {
       Move<ID, S>? move = allMoves[value.from]?[type];

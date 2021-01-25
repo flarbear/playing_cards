@@ -196,8 +196,11 @@ class PlayingCardPainter extends CustomPainter {
     Paint p = Paint()
       ..strokeWidth = 1.0;
 
+    double scaleX = size.width  / style.preferredSize.width;
+    double scaleY = size.height / style.preferredSize.height;
+
     Rect outlineBounds = (Offset.zero & size).deflate(0.5);
-    RRect outline = RRect.fromRectAndRadius(outlineBounds, Radius.circular(5));
+    RRect outline = RRect.fromRectAndRadius(outlineBounds, Radius.elliptical(5 * scaleX, 5 * scaleY));
 
     if (card != null) {
       p.color = highlighted ? Color(0xFFC8E6C9) : Color(0xFFFFFFFF);
@@ -206,10 +209,7 @@ class PlayingCardPainter extends CustomPainter {
       p.color = Color(0x42000000);
       canvas.drawRRect(outline, p);
 
-      canvas.scale(
-        size.width  / style.preferredSize.width,
-        size.height / style.preferredSize.height,
-      );
+      canvas.scale(scaleX, scaleY);
       if (card!.isBack) {
         style.drawCardBack(canvas);
       } else {

@@ -19,7 +19,7 @@ abstract class PlayingCardItem<ID> extends StatelessWidget {
 
   final ID? id;
 
-  Size preferredSize(CardStyle? inheritedStyle);
+  Size preferredSize(CardStyle tableauStyle, BuildContext context);
 }
 
 /// A widget that paints a playing card. The artwork will auto-scale to
@@ -31,11 +31,9 @@ class SinglePlayingCard<ID> extends PlayingCardItem<ID> {
 
   final PlayingCard? card;
 
-  Size preferredSize(CardStyle? inheritedStyle) {
-    CardStyle style =
-        card?.style
-            ?? inheritedStyle
-            ?? defaultCardStyle;
+  @override
+  Size preferredSize(CardStyle tableauStyle, BuildContext context) {
+    CardStyle style = card?.style ?? tableauStyle;
     return style.preferredSize;
   }
 
@@ -61,35 +59,77 @@ class SinglePlayingCard<ID> extends PlayingCardItem<ID> {
   }
 }
 
+enum StackedPlayingCardsCaption {
+  none,
+  hover,
+  small,
+  smallNonZero,
+  standard,
+  standardNonZero,
+}
+
 class StackedPlayingCards<ID> extends PlayingCardItem<ID> {
-  StackedPlayingCards(this.stack, { ID? id })
+  StackedPlayingCards(this.stack, { ID? id, this.caption = StackedPlayingCardsCaption.standard, })
       : super(id);
 
-  StackedPlayingCards.hidden(int size, { ID? id })
-      : this(PlayingCardStack.hidden(size), id: id);
+  StackedPlayingCards.hidden(int size, {
+    ID? id,
+    StackedPlayingCardsCaption caption = StackedPlayingCardsCaption.standard,
+  })
+      : this(PlayingCardStack.hidden(size), id: id, caption: caption);
 
-  StackedPlayingCards.fromList(List<PlayingCard> cards, { ID? id })
-      : this(PlayingCardStack.fromList(cards), id: id);
+  StackedPlayingCards.fromList(List<PlayingCard> cards, {
+    ID? id,
+    StackedPlayingCardsCaption caption = StackedPlayingCardsCaption.standard,
+  })
+      : this(PlayingCardStack.fromList(cards), id: id, caption: caption);
 
   final PlayingCardStack stack;
+  final StackedPlayingCardsCaption caption;
 
   @override
-  Size preferredSize(CardStyle? inheritedStyle) {
-    CardStyle style =
-        stack.top?.style
-            ?? inheritedStyle
-            ?? defaultCardStyle;
-    return style.preferredSize + Offset(0, 20);
+  Size preferredSize(CardStyle tableauStyle, BuildContext context) {
+    CardStyle style = stack.top?.style ?? tableauStyle;
+    return style.preferredSize + Offset(0, _captionString != null ? 30 : 0);
+  }
+
+  String? get _captionString {
+    switch (caption) {
+      case StackedPlayingCardsCaption.standardNonZero:
+        return stack.size == 0 ? '' : '(${stack.size} cards)';
+      case StackedPlayingCardsCaption.standard:
+        return stack.size == 0 ? '(empty)' : '(${stack.size} cards)';
+      case StackedPlayingCardsCaption.smallNonZero:
+        return stack.size == 0 ? '' : '(${stack.size})';
+      case StackedPlayingCardsCaption.small:
+        return '(${stack.size})';
+      default:
+        break;
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        SinglePlayingCard(stack.size == 0 ? null : stack.top, id: id),
-        stack.size == 0 ? Text('(empty)') : Text('(${stack.size} cards)'),
-      ],
+    Size size = preferredSize(TableauInfo.of(context)?.style ?? defaultCardStyle, context);
+    String? captionString = _captionString;
+    Widget widget = AspectRatio(
+      aspectRatio: size.aspectRatio,
+      child: Column(
+        children: <Widget>[
+          SinglePlayingCard(stack.size == 0 ? null : stack.top, id: id),
+          if (captionString != null)
+            Expanded(child: FittedBox(fit: BoxFit.scaleDown, child: Text(captionString),)),
+        ],
+      ),
     );
+    if (caption == StackedPlayingCardsCaption.hover) {
+      widget = Tooltip(
+        message: '${stack.size} cards',
+        child: widget,
+      );
+    }
+    return widget;
   }
 }
 
@@ -102,15 +142,14 @@ class CascadedPlayingCards<ID> extends PlayingCardItem<ID> {
   final int minimumCards;
 
   @override
-  Size preferredSize(CardStyle? inheritedStyle) => _preferredSize(inheritedStyle, null);
+  Size preferredSize(CardStyle tableauStyle, BuildContext context) => _preferredSize(tableauStyle, null);
 
-  Size _preferredSize(CardStyle? inheritedStyle, List<double>? cascadeOffsets) {
-    CardStyle contextStyle = inheritedStyle ?? defaultCardStyle;
+  Size _preferredSize(CardStyle tableauStyle, List<double>? cascadeOffsets) {
     double maxW = 0;
     double maxH = 0;
     double y = 0;
     for (int i = 0; i < minimumCards || i < cards.length; i++) {
-      CardStyle style = (i < cards.length ? cards[i].style : null) ?? contextStyle;
+      CardStyle style = (i < cards.length ? cards[i].style : null) ?? tableauStyle;
       maxW = max(maxW, style.preferredSize.width);
       maxH = max(maxH, y + style.preferredSize.height);
       cascadeOffsets?.add(y);
@@ -122,7 +161,7 @@ class CascadedPlayingCards<ID> extends PlayingCardItem<ID> {
   @override
   Widget build(BuildContext context) {
     List<double> cascadeOffsets = [];
-    Size size = _preferredSize(TableauInfo.of(context)?.style, cascadeOffsets);
+    Size size = _preferredSize(TableauInfo.of(context)?.style ?? defaultCardStyle, cascadeOffsets);
     double alignScale = 2.0 / cascadeOffsets.last;
     if (!alignScale.isFinite) alignScale = 1.0;
     return AspectRatio(
@@ -147,21 +186,25 @@ class CascadedPlayingCards<ID> extends PlayingCardItem<ID> {
 
 class TableauItem<ID> {
   TableauItem({
+    this.scale = 1.0,
     this.insets = EdgeInsets.zero,
     required this.childId,
   });
 
+  final double scale;
   final EdgeInsets insets;
   final ID childId;
 }
 
 class TableauRow<ID> {
   TableauRow({
+    this.scale = 1.0,
     this.insets = EdgeInsets.zero,
     required this.items,
     this.innerItemPad = 5.0,
   });
 
+  final double scale;
   final EdgeInsets insets;
   final List<TableauItem<ID>> items;
   final double innerItemPad;
@@ -169,11 +212,13 @@ class TableauRow<ID> {
 
 class Tableau<ID> {
   Tableau({
+    this.scale = 1.0,
     this.insets = const EdgeInsets.all(5.0),
     required this.rows,
     this.innerRowPad = 5.0,
   });
 
+  final double scale;
   final EdgeInsets insets;
   final List<TableauRow<ID>> rows;
   final double innerRowPad;
@@ -186,40 +231,43 @@ class TableauLayoutDelegate<ID> extends MultiChildLayoutDelegate {
 
   final Tableau<ID> spec;
   final Map<ID, Size> preferredSizes;
-  late final Size prefSize = _processSpec(null);
+  late final Size prefSize = _processSpec(1.0, false);
 
-  Offset _processItem(TableauItem<ID> item, Offset pos, double? scale) {
-    pos += item.insets.topLeft;
-    if (scale != null) positionChild(item.childId as Object, pos * scale);
+  Offset _processItem(TableauItem<ID> item, Offset pos, double scale, bool doPosition) {
+    scale *= item.scale;
+    pos += item.insets.topLeft * scale;
+    if (doPosition) positionChild(item.childId as Object, pos);
     Size childSize = preferredSizes[item.childId]!;
     return pos.translate(
-      childSize.width  + item.insets.right,
-      childSize.height + item.insets.bottom,
+      (childSize.width  + item.insets.right) * scale,
+      (childSize.height + item.insets.bottom) * scale,
     );
   }
 
-  Offset _processRow(TableauRow<ID> row, Offset pos, double? scale) {
-    pos += row.insets.topLeft;
+  Offset _processRow(TableauRow<ID> row, Offset pos, double scale, bool doPosition) {
+    scale *= row.scale;
+    pos += row.insets.topLeft * scale;
     double maxY = pos.dy;
     for (int colIndex = 0; colIndex < row.items.length; colIndex++) {
-      if (colIndex > 0) pos = pos.translate(row.innerItemPad, 0.0);
-      Offset childBottomRight = _processItem(row.items[colIndex], pos, scale);
+      if (colIndex > 0) pos = pos.translate(row.innerItemPad * scale, 0.0);
+      Offset childBottomRight = _processItem(row.items[colIndex], pos, scale, doPosition);
       maxY = max(maxY, childBottomRight.dy);
       pos = Offset(childBottomRight.dx, pos.dy);
     }
-    return Offset(pos.dx + row.insets.right, maxY + row.insets.bottom);
+    return Offset(pos.dx + row.insets.right * scale, maxY + row.insets.bottom * scale);
   }
 
-  Size _processSpec(double? scale) {
-    Offset pos = spec.insets.topLeft;
+  Size _processSpec(double scale, bool doPosition) {
+    scale *= spec.scale;
+    Offset pos = spec.insets.topLeft * scale;
     double maxX = pos.dx;
     for (int rowIndex = 0; rowIndex < spec.rows.length; rowIndex++) {
-      if (rowIndex > 0) pos = pos.translate(0.0, spec.innerRowPad);
-      Offset rowBottomRight = _processRow(spec.rows[rowIndex], pos, scale);
+      if (rowIndex > 0) pos = pos.translate(0.0, spec.innerRowPad * scale);
+      Offset rowBottomRight = _processRow(spec.rows[rowIndex], pos, scale, doPosition);
       maxX = max(maxX, rowBottomRight.dx);
       pos = Offset(pos.dx, rowBottomRight.dy);
     }
-    return Size(maxX + spec.insets.right, pos.dy + spec.insets.bottom);
+    return Size(maxX + spec.insets.right * scale, pos.dy + spec.insets.bottom * scale);
   }
 
   @override
@@ -251,14 +299,16 @@ class TableauLayoutDelegate<ID> extends MultiChildLayoutDelegate {
   void performLayout(Size size) {
     double scale = size.width / prefSize.width;
 
+    double tableauScale = scale * spec.scale;
     for (final row in spec.rows) {
+      double rowScale = tableauScale * row.scale;
       for (final item in row.items) {
         Size childSize = preferredSizes[item.childId]!;
-        layoutChild(item.childId as Object, BoxConstraints.tight(childSize * scale));
+        layoutChild(item.childId as Object, BoxConstraints.tight(childSize * rowScale * item.scale));
       }
     }
 
-    _processSpec(scale);
+    _processSpec(scale, true);
   }
 
   bool _sameSizes(Map<dynamic, Size> oldSizes) {
@@ -300,6 +350,7 @@ class PlayingCardTableau<ID, S> extends StatelessWidget {
     this.status,
     this.tracker,
     this.style,
+    this.backgroundColor,
   });
 
   final Widget? status;
@@ -307,18 +358,13 @@ class PlayingCardTableau<ID, S> extends StatelessWidget {
   final Map<ID, PlayingCardItem<ID>> items;
   final MoveTracker<ID, S>? tracker;
   final CardStyle? style;
-
-  late final Map<ID, Size> preferredSizes = items.map((id, item) =>
-      MapEntry(id, item.preferredSize(style))
-  );
+  final Color? backgroundColor;
 
   late final List<Widget> trackedChildren = items.entries.map((e) =>
       LayoutId(id: e.key as Object, child: track(e.key, e.value, tracker))
   ).toList();
 
-  late final TableauLayoutDelegate<ID> delegate = TableauLayoutDelegate(tableauSpec, preferredSizes);
-
-  static Widget track<ID, S>(ID id, PlayingCardItem<ID> item, MoveTracker<ID, S>? tracker) {
+  static Widget track<ID, S>(ID? id, Widget item, MoveTracker<ID, S>? tracker) {
     if (tracker == null) return item;
     return GestureDetector(
       onTap: () => tracker.hoveringOver(id, true),
@@ -332,18 +378,29 @@ class PlayingCardTableau<ID, S> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    CardStyle tableauStyle = style ?? TableauInfo.of(context)?.style ?? defaultCardStyle;
+    Widget child = Column(
+      children: [
+        if (status != null) status!,
+        CustomMultiChildLayout(
+          delegate: TableauLayoutDelegate(tableauSpec, items.map((id, item) =>
+              MapEntry(id, item.preferredSize(tableauStyle, context))
+          )),
+          children: trackedChildren,
+        ),
+      ],
+    );
+    if (backgroundColor != null) {
+      child = Container(color: backgroundColor, child: child);
+    }
+    child = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: child,
+    );
     return TableauInfo(
       tracker: tracker,
-      style: style,
-      child: Column(
-        children: [
-          if (status != null) status!,
-          CustomMultiChildLayout(
-            delegate: delegate,
-            children: trackedChildren,
-          ),
-        ],
-      ),
+      style: tableauStyle,
+      child: child,
     );
   }
 }
