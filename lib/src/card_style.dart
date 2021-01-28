@@ -19,6 +19,10 @@ List<CardStyle> allCardStyles = [ const ClassicCardStyle() ];
 abstract class CardStyle {
   const CardStyle();
 
+  String get name;
+  int get numRanks;
+  int get numSuits;
+
   Size get preferredSize;
   double get cascadeOffset;
   double get aspectRatio => preferredSize.aspectRatio;
@@ -58,11 +62,15 @@ abstract class CardStyle {
 class ClassicCardStyle extends CardStyle {
   const ClassicCardStyle() : super();
 
+  @override String get name => 'ClassicCardStyle';
+  @override int get numRanks => 13;
+  @override int get numSuits => 4;
+
   @override Size get preferredSize => const Size(90, 140);
   @override double get cascadeOffset => 25;
   @override bool get rendersWildRanks => true;
 
-  static final Path heart = Path()
+  static final Path _heart = Path()
     ..moveTo(45, 55)
     ..cubicTo(45, 50, 52, 40, 60, 40)
     ..cubicTo(68, 40, 75, 47, 75, 55)
@@ -72,7 +80,7 @@ class ClassicCardStyle extends CardStyle {
     ..cubicTo(38, 40, 45, 50, 45, 55)
     ..close();
 
-  static final Path diamond = Path()
+  static final Path _diamond = Path()
     ..moveTo(45, 30)
     ..arcToPoint(Offset(20,  70), radius: Radius.elliptical(50, 70))
     ..arcToPoint(Offset(45, 110), radius: Radius.elliptical(50, 70))
@@ -80,7 +88,7 @@ class ClassicCardStyle extends CardStyle {
     ..arcToPoint(Offset(45,  30), radius: Radius.elliptical(50, 70))
     ..close();
 
-  static final Path spade = Path()
+  static final Path _spade = Path()
     ..moveTo(45, 25)
     ..cubicTo(45, 45, 75, 55, 75, 70)
     ..cubicTo(75, 78, 68, 85, 60, 85)
@@ -95,7 +103,7 @@ class ClassicCardStyle extends CardStyle {
     ..cubicTo(15, 55, 45, 45, 45, 25)
     ..close();
 
-  static final Path club = Path()
+  static final Path _club = Path()
     ..arcTo(Rect.fromCircle(center: Offset(45, 45), radius: 17), pi / 2, 1.9 * pi, true)
     ..arcTo(Rect.fromCircle(center: Offset(60, 70), radius: 17), pi, 1.9 * pi, true)
     ..arcTo(Rect.fromCircle(center: Offset(30, 70), radius: 17), pi, 1.9 * pi, true)
@@ -117,7 +125,7 @@ class ClassicCardStyle extends CardStyle {
   @override
   String rankName(PlayingCard card) {
     if (card.isBack) return 'unknown';
-    return [ 'Joker', 'Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen' ][card.rank];
+    return [ 'Joker', 'Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King' ][card.rank];
   }
 
   @override
@@ -148,7 +156,7 @@ class ClassicCardStyle extends CardStyle {
     return p;
   }
 
-  static final Path zigzag = _makeZigZag();
+  static final Path _zigzag = _makeZigZag();
 
   @override
   void drawCardBack(Canvas canvas) {
@@ -157,7 +165,7 @@ class ClassicCardStyle extends CardStyle {
     p.color = Color(0xFF1B5E20);
     canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTRB(7, 7, 83, 133), Radius.circular(5)), p);
     p.color = Color(0xFF795548);
-    canvas.drawPath(zigzag, p);
+    canvas.drawPath(_zigzag, p);
   }
 
   static List<Color> _suitColors = [ Color(0xFF000000), Color(0xFFF44336), Color(0xFFF44336), Color(0xFF000000) ];
@@ -170,7 +178,7 @@ class ClassicCardStyle extends CardStyle {
       p.color = Color(0xFF000000);
       drawTextAnchored(canvas, 42, 80, Offset(0.5, 0.5), Offset(45, 70), 'Joker', p.color, 'Tahoma');
     } else {
-      Path suitPath = [ spade, heart, diamond, club ][card.suit & 3];
+      Path suitPath = [ _spade, _heart, _diamond, _club ][card.suit & 3];
       p.color = _suitColors[card.suit & 3];
       canvas.drawPath(suitPath, p);
     }

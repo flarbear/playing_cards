@@ -11,19 +11,31 @@ import 'package:flutter/material.dart';
 import 'package:playing_cards/playing_cards.dart';
 
 main() {
-  runApp(TestScreen(title: 'Card Viewer'));
+  runApp(MyApp());
 }
 
-class TestScreen extends StatefulWidget {
-  TestScreen({Key? key, required this.title}) : super(key: key);
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Card Viewer',
+      theme: ThemeData(),
+      home: new CardViewer(title: 'Card Viewer', style: defaultCardStyle),
+    );
+  }
+}
+
+class CardViewer extends StatefulWidget {
+  CardViewer({Key? key, required this.title, required this.style}) : super(key: key);
 
   final String title;
+  final CardStyle style;
 
   @override
-  _TestScreenState createState() => _TestScreenState();
+  _CardViewerState createState() => _CardViewerState();
 }
 
-class _TestScreenState extends State<TestScreen> {
+class _CardViewerState extends State<CardViewer> {
   Widget _wrap(Widget child) {
     return Padding(
       padding: EdgeInsets.all(5.0),
@@ -39,24 +51,26 @@ class _TestScreenState extends State<TestScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text('${widget.title} - ${widget.style.name}'),
       ),
       backgroundColor: Colors.green,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            for (int suit = 0; suit < 4; suit++)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  _wrap(SinglePlayingCard(null)),
-                  _wrap(SinglePlayingCard(PlayingCard.back)),
-                  for (int rank = 0; rank <= 12; rank++)
-                    _wrap(SinglePlayingCard(PlayingCard(suit: suit, rank:rank))),
-                ],
-              ),
-          ],
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: Column(
+            children: <Widget>[
+              for (int suit = 0; suit < widget.style.numSuits; suit++)
+                Row(
+                  children: <Widget>[
+                    _wrap(SinglePlayingCard(null)),
+                    _wrap(SinglePlayingCard(PlayingCard.back)),
+                    for (int rank = 0; rank <= widget.style.numRanks; rank++)
+                      _wrap(SinglePlayingCard(PlayingCard(suit: suit, rank:rank))),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );
