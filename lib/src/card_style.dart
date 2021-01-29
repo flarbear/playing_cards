@@ -13,8 +13,8 @@ import 'package:flutter/rendering.dart';
 
 import 'playing_card.dart';
 
-CardStyle defaultCardStyle = const ClassicCardStyle();
-List<CardStyle> allCardStyles = [ const ClassicCardStyle() ];
+CardStyle defaultCardStyle = const ClassicSimpleCardStyle();
+List<CardStyle> allCardStyles = [ const ClassicSimpleCardStyle() ];
 
 abstract class CardStyle {
   const CardStyle();
@@ -59,10 +59,10 @@ abstract class CardStyle {
   }
 }
 
-class ClassicCardStyle extends CardStyle {
-  const ClassicCardStyle() : super();
+class ClassicSimpleCardStyle extends CardStyle {
+  const ClassicSimpleCardStyle() : super();
 
-  @override String get name => 'ClassicCardStyle';
+  @override String get name => 'Classic-Simplified';
   @override int get numRanks => 13;
   @override int get numSuits => 4;
 
@@ -199,7 +199,7 @@ class ClassicCardStyle extends CardStyle {
 
   @override
   String toString() {
-    return 'ClassicCardTheme()';
+    return 'ClassicSimpleCardStyle()';
   }
 }
 
