@@ -26,15 +26,15 @@ abstract class PlayingCardItem<ID> extends StatelessWidget {
 /// the size of the space allocated to it, but the best results will occur
 /// when the space has the aspect ratio suggested by the CardStyle.
 class SinglePlayingCard<ID> extends PlayingCardItem<ID> {
-  SinglePlayingCard(this.card, { ID? id })
+  SinglePlayingCard(this.card, { ID? id, this.size })
       : super(id);
 
   final PlayingCard? card;
+  final Size? size;
 
   @override
   Size preferredSize(CardStyle tableauStyle, BuildContext context) {
-    CardStyle style = card?.style ?? tableauStyle;
-    return style.preferredSize;
+    return size ?? (card?.style ?? tableauStyle).preferredSize;
   }
 
   @override
@@ -46,7 +46,7 @@ class SinglePlayingCard<ID> extends PlayingCardItem<ID> {
             ?? defaultCardStyle;
     return RepaintBoundary(
       child: AspectRatio(
-        aspectRatio: style.aspectRatio,
+        aspectRatio: size?.aspectRatio ?? style.aspectRatio,
         child: CustomPaint(
           painter: PlayingCardPainter(style, card,
             id != null && (info?.tracker?.isHighlighted(id) ?? false),
@@ -173,11 +173,10 @@ class CascadedPlayingCards<ID> extends PlayingCardItem<ID> {
       aspectRatio: size.aspectRatio,
       child: Stack(
         children: <Widget>[
-          if (cards.length == 0)
-            Align(
-              alignment: Alignment.topCenter,
-              child: SinglePlayingCard(null, id: id),
-            ),
+          Align(
+            alignment: Alignment.topCenter,
+            child: SinglePlayingCard(null, id: cards.length == 0 ? id : null, size: size),
+          ),
           for (int i = 0; i < cards.length; i++)
             Align(
               alignment: Alignment(0, cascadeOffsets[i] * alignScale - 1),
