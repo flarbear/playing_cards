@@ -1,6 +1,6 @@
 name: playing_cards
 description: A Flutter project with classes for expressing a Playing Card and rendering it.
-version: 0.0.4
+version: 0.0.5
 author: flarbear
 homepage: http://github.com/flarbear
 

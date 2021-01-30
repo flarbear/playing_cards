@@ -20,6 +20,18 @@ abstract class PlayingCardItem<ID> extends StatelessWidget {
   final ID? id;
 
   Size preferredSize(CardStyle tableauStyle, BuildContext context);
+
+  Widget track(MoveTracker? tracker) {
+    if (tracker == null) return this;
+    return GestureDetector(
+      onTap: () => tracker.hoveringOver(id, true),
+      child: MouseRegion(
+        onHover: (event) => tracker.hoveringOver(id, false),
+        onExit: (event) => tracker.leaving(id),
+        child: this,
+      ),
+    );
+  }
 }
 
 /// A widget that paints a playing card. The artwork will auto-scale to
@@ -45,14 +57,18 @@ class SinglePlayingCard<ID> extends PlayingCardItem<ID> {
             ?? info?.style
             ?? defaultCardStyle;
     return RepaintBoundary(
-      child: AspectRatio(
-        aspectRatio: size?.aspectRatio ?? style.aspectRatio,
-        child: CustomPaint(
-          painter: PlayingCardPainter(style, card,
-            id != null && (info?.tracker?.isHighlighted(id) ?? false),
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: (size ?? style.preferredSize).width,
+          height: (size ?? style.preferredSize).height,
+          child: CustomPaint(
+            painter: PlayingCardPainter(style, card,
+              id != null && (info?.tracker?.isHighlighted(id) ?? false),
+            ),
+            isComplex: true,
+            willChange: false,
           ),
-          isComplex: true,
-          willChange: false,
         ),
       ),
     );
@@ -364,25 +380,10 @@ class PlayingCardTableau<ID, S> extends StatelessWidget {
   final CardStyle? style;
   final Color? backgroundColor;
 
-  late final List<Widget> trackedChildren = items.entries.map((e) =>
-      LayoutId(id: e.key as Object, child: track(e.key, e.value, tracker))
-  ).toList();
-
-  static Widget track<ID, S>(ID? id, Widget item, MoveTracker<ID, S>? tracker) {
-    if (tracker == null) return item;
-    return GestureDetector(
-      onTap: () => tracker.hoveringOver(id, true),
-      child: MouseRegion(
-        onHover: (event) => tracker.hoveringOver(id, false),
-        onExit: (event) => tracker.leaving(id),
-        child: item,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    CardStyle tableauStyle = style ?? TableauInfo.of(context)?.style ?? defaultCardStyle;
+    TableauInfo? info = TableauInfo.of(context);
+    CardStyle tableauStyle = style ?? info?.style ?? defaultCardStyle;
     Widget child = Column(
       children: [
         if (status != null) status!,
@@ -390,7 +391,9 @@ class PlayingCardTableau<ID, S> extends StatelessWidget {
           delegate: TableauLayoutDelegate(tableauSpec, items.map((id, item) =>
               MapEntry(id, item.preferredSize(tableauStyle, context))
           )),
-          children: trackedChildren,
+          children: items.entries.map((e) =>
+              LayoutId(id: e.key as Object, child: e.value.track(tracker))
+          ).toList(),
         ),
       ],
     );
@@ -401,10 +404,13 @@ class PlayingCardTableau<ID, S> extends StatelessWidget {
       fit: BoxFit.scaleDown,
       child: child,
     );
-    return TableauInfo(
-      tracker: tracker,
-      style: tableauStyle,
-      child: child,
-    );
+    if (info?.style != tableauStyle || info?.tracker != tracker) {
+      child = TableauInfo(
+        tracker: tracker,
+        style: tableauStyle,
+        child: child,
+      );
+    }
+    return child;
   }
 }
